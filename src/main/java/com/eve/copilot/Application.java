@@ -14,9 +14,9 @@ public class Application {
         String[] data_parts = scanLine.split("\t");
         char type = data_parts[2].charAt(0);
         if (type=='W'){
-            return "C?-"+data_parts[0].substring(0, 3)+"-K162";
+            return data_parts[0].substring(0, 3) + "-C?-K162";
         } else {
-            return data_parts[2].charAt(0) + "-" + data_parts[0].substring(0, 3) + "-" + data_parts[3];
+            return data_parts[0].substring(0, 3) + "-" + data_parts[2].charAt(0) + "-" + data_parts[3];
         }
     }
 

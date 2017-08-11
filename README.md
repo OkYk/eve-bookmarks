@@ -1,7 +1,7 @@
 # eve-bookmarks
 
 Matches the clipboard content to site signature and replaces it with bookmark.
-Format: [C? R D G]-*SIGID*-*SITE NAME*
+Format: *SIGID*-[C? R D G]-*SITE NAME*
 
 Build instrucations:
   Install JDK 8 http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html
@@ -9,5 +9,5 @@ Build instrucations:
   run "mvn clean package" in the project root folder
   
 Run instructions:
-  run "java -jar bookmark-1.0-SNAPSHOT.jar"
+  run "java -jar bookmark-1.1-SNAPSHOT.jar"
   

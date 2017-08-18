@@ -7,7 +7,7 @@ import java.io.IOException;
 public class Application {
 
     private static String bookmarkFromScanLine(String scanLine){
-        if (!scanLine.matches("[A-Z]{3}-[0-9]{3}\tCosmic Signature\t[A-Za-z ]+\t[A-Za-z -0-9]+\t100.0%\t[0-9\\.,]+ [A-Za-z]+$")) {
+        if (!scanLine.matches("[A-Z]{3}-[0-9]{3}\t[A-Za-z ]+\t[A-Za-z ]+\t[A-Za-z -0-9]+\t100.0%\t[0-9\\.,]+ [A-Za-z]+$")) {
             return null;
         }
 

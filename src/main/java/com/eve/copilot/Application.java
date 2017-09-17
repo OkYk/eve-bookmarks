@@ -8,9 +8,10 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+import java.util.function.Supplier;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class Application {
@@ -39,6 +40,16 @@ public class Application {
         return Arrays.stream(sigDb).collect(Collectors.toMap(o -> o.sig, o -> o.val));
     }
 
+    private static Set<String> loadHubs() {
+        ClassLoader classloader = Thread.currentThread().getContextClassLoader();
+        InputStream is = classloader.getResourceAsStream("trade_hubs.json");
+
+        Gson g = new Gson();
+        Tradehub[] hubDb = g.fromJson(new BufferedReader(new InputStreamReader(is)), Tradehub[].class);
+        System.out.println("Hubs loaded: " + hubDb.length);
+        return Arrays.stream(hubDb).map(Tradehub::getHubname).collect(Collectors.toSet());
+    }
+
     private static String expandSig(String scanLine, Map<String, String> sigDB) {
         if (!scanLine.matches("[A-Z]{3}-C\\?-[A-Za-z][0-9]+")) {
             return null;
@@ -56,6 +67,7 @@ public class Application {
     public static void main(String args[]) throws InterruptedException {
         String data = "";
         Map<String, String> sigDB = loadSigs();
+        Set<String> hubDB = loadHubs();
         while (true) {
             String clipboardContents = getClipboardContents();
             if (!data.equalsIgnoreCase(clipboardContents)) {
@@ -74,11 +86,39 @@ public class Application {
                         Toolkit.getDefaultToolkit().getSystemClipboard().setContents(selection, selection);
                         System.out.println("set: " + sigExpansion);
                     }
+                } else if (data.contains("Jita")) {
+                    final String hubExpansion = expandHub(data, hubDB);
+                    StringSelection selection = new StringSelection(hubExpansion);
+                    Toolkit.getDefaultToolkit().getSystemClipboard().setContents(selection, selection);
+                    System.out.println("set: " + hubExpansion);
                 }
 
             }
             Thread.sleep(1000);
         }
+    }
+
+    private static String expandHub(String data, Set<String> hubDB) {
+        if (!data.contains("Coordinate")) {
+            return null;
+        }
+
+        final Map<String, Integer> distance = new LinkedHashMap<>();
+        final String[] data_parts = data.split("\n");
+        for (String part : data_parts) {
+            for (String hub : hubDB) {
+                if (part.toLowerCase().contains(hub)){
+                    final Matcher hubMatcher = Pattern.compile("Coordinate\t([0-9]+)").matcher(part);
+                    if (hubMatcher.find()){
+                        distance.put(hub, Integer.valueOf(hubMatcher.group(1)));
+                    }
+                }
+            }
+        }
+        return distance.entrySet().stream()
+                .sorted(Comparator.comparing(Map.Entry::getValue))
+                .map(o -> o.getKey()+": "+o.getValue()+"\n")
+                .collect(Collectors.joining());
     }
 
     private static String getClipboardContents() {

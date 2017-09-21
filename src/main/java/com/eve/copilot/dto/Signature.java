@@ -1,4 +1,4 @@
-package com.eve.copilot;
+package com.eve.copilot.dto;
 
 public class Signature {
 

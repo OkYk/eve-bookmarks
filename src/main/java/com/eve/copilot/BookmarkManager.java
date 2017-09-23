@@ -20,6 +20,10 @@ class BookmarkManager {
     private final Set<String> hubDB = loadHubs();
     private final Pattern SCAN_RESULT_PATTERN = Pattern.compile("[A-Z]{3}-[0-9]{3}\t[A-Za-z ]+\t[A-Za-z ]+\t[A-Za-z -0-9]+\t100.0%\t[0-9\\.,]+ [A-Za-z]+$");
     private final Pattern SIG_PATTERN = Pattern.compile("[A-Z]{3}-C\\?-[A-Za-z][0-9]+");
+    private boolean probeResultEnabled = true;
+    private boolean sigEnabled = true;
+    private boolean hubDistanceEnabled = true;
+    private boolean enabled = true;
 
     private Map<String, String> loadSigs() {
         ClassLoader classloader = Thread.currentThread().getContextClassLoader();
@@ -42,7 +46,7 @@ class BookmarkManager {
     }
 
     private String bookmarkFromScanLine(String scanLine) {
-        if (!SCAN_RESULT_PATTERN.matcher(scanLine).matches()) {
+        if (!probeResultEnabled || !SCAN_RESULT_PATTERN.matcher(scanLine).matches()) {
             return null;
         }
 
@@ -56,7 +60,7 @@ class BookmarkManager {
     }
 
     private String expandSig(String scanLine, Map<String, String> sigDB) {
-        if (!SIG_PATTERN.matcher(scanLine).matches()) {
+        if (!sigEnabled || !SIG_PATTERN.matcher(scanLine).matches()) {
             return null;
         }
 
@@ -70,7 +74,7 @@ class BookmarkManager {
     }
 
     boolean bmClipboard(Transferable trans, Clipboard c) {
-        if (trans.isDataFlavorSupported(DataFlavor.stringFlavor)) {
+        if (enabled && trans.isDataFlavorSupported(DataFlavor.stringFlavor)) {
             try {
                 String clipText = (String) trans
                         .getTransferData(DataFlavor.stringFlavor);
@@ -91,10 +95,12 @@ class BookmarkManager {
                     }
                 } else if (clipText.contains("Jita")) {
                     final String hubExpansion = expandHub(clipText, hubDB);
-                    StringSelection selection = new StringSelection(hubExpansion);
-                    c.setContents(selection, selection);
-                    System.out.println("set: " + hubExpansion);
-                    return true;
+                    if (hubExpansion != null && !hubExpansion.isEmpty()) {
+                        StringSelection selection = new StringSelection(hubExpansion);
+                        c.setContents(selection, selection);
+                        System.out.println("set: " + hubExpansion);
+                        return true;
+                    }
                 }
             } catch (UnsupportedFlavorException | IOException e) {
                 e.printStackTrace();
@@ -105,7 +111,7 @@ class BookmarkManager {
     }
 
     private String expandHub(String data, Set<String> hubDB) {
-        if (!data.contains("Coordinate")) {
+        if (!hubDistanceEnabled || !data.contains("Coordinate\t")) {
             return null;
         }
 
@@ -125,5 +131,21 @@ class BookmarkManager {
                 .sorted(Comparator.comparing(Map.Entry::getValue))
                 .map(o -> o.getKey() + ": " + o.getValue() + "\n")
                 .collect(Collectors.joining());
+    }
+
+    void setProbeResultEnabled(boolean probeResultEnabled) {
+        this.probeResultEnabled = probeResultEnabled;
+    }
+
+    void setSigEnabled(boolean sigEnabled) {
+        this.sigEnabled = sigEnabled;
+    }
+
+    void setHubDistanceEnabled(boolean hubDistanceEnabled) {
+        this.hubDistanceEnabled = hubDistanceEnabled;
+    }
+
+    void setEnabled(boolean enabled) {
+        this.enabled = enabled;
     }
 }

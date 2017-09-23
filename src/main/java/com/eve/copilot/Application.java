@@ -12,6 +12,7 @@ public class Application extends Thread implements ClipboardOwner {
 
     @Override
     public void run() {
+        new UIController(BM_MANAGER);
         Transferable trans = SYS_CLIP.getContents(this);
         TakeOwnership(trans);
     }
@@ -32,7 +33,6 @@ public class Application extends Thread implements ClipboardOwner {
         } catch (Exception ex) {
             ex.printStackTrace();
         }
-
     }
 
     private void TakeOwnership(Transferable t) {

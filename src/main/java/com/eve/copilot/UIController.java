@@ -48,7 +48,11 @@ public class UIController {
             enableFlag.addItemListener(e -> bmManager.setEnabled(enableFlag.getState()));
             exitItem.addActionListener(e -> { tray.remove(trayIcon); System.exit(0);});
         }
+    }
 
+    public void message(String message){
+        System.out.println("Message: "+message);
+        trayIcon.displayMessage("", message, TrayIcon.MessageType.NONE);
     }
 
 }

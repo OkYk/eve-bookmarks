@@ -1,14 +1,20 @@
 package com.eve.copilot;
 
+import com.eve.copilot.dto.LootEntry;
 import com.eve.copilot.dto.Signature;
 import com.eve.copilot.dto.Tradehub;
 import com.google.gson.Gson;
+import fr.guiguilechat.eveonline.database.EveDatabase;
+import fr.guiguilechat.eveonline.database.esi.ESIMarket;
+import fr.guiguilechat.eveonline.database.yaml.MetaInf;
+import fr.guiguilechat.eveonline.database.yaml.YamlDatabase;
 
 import java.awt.datatransfer.*;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.text.DecimalFormat;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -18,12 +24,35 @@ class BookmarkManager {
 
     private final Map<String, String> sigDB = loadSigs();
     private final Set<String> hubDB = loadHubs();
+    private final EveDatabase evedb = new YamlDatabase();
+    private final ESIMarket esimarket = evedb.ESIRegion("TheForge");
     private final Pattern SCAN_RESULT_PATTERN = Pattern.compile("[A-Z]{3}-[0-9]{3}\t[A-Za-z ]+\t[A-Za-z ]+\t[A-Za-z -0-9]+\t100.0%\t[0-9\\.,]+ [A-Za-z]+$");
     private final Pattern SIG_PATTERN = Pattern.compile("[A-Z]{3}-C\\?-[A-Za-z][0-9]+");
     private boolean probeResultEnabled = true;
     private boolean sigEnabled = true;
     private boolean hubDistanceEnabled = true;
     private boolean enabled = true;
+    private static final DecimalFormat priceFormatter = new DecimalFormat("#0.0");
+
+    /**
+     *
+     * @param value
+     * @return
+     */
+    private static String formatPrice(double value) {
+        if (value >= 1e12) {
+            return priceFormatter.format(value / 1e12) + "T";
+        } else if (value >= 1e9) {
+            return priceFormatter.format(value / 1e9) + "G";
+        } else if (value >= 1e6) {
+            return priceFormatter.format(value / 1e6) + "M";
+        } else if (value >= 1e3) {
+            return priceFormatter.format(value / 1e3) + "k";
+        } else {
+            return priceFormatter.format(value);
+        }
+    }
+
 
     private Map<String, String> loadSigs() {
         ClassLoader classloader = Thread.currentThread().getContextClassLoader();
@@ -73,7 +102,7 @@ class BookmarkManager {
         return null;
     }
 
-    boolean bmClipboard(Transferable trans, Clipboard c) {
+    boolean bmClipboard(Transferable trans, Clipboard c, UIController ui) {
         if (enabled && trans.isDataFlavorSupported(DataFlavor.stringFlavor)) {
             try {
                 String clipText = (String) trans
@@ -101,6 +130,25 @@ class BookmarkManager {
                         System.out.println("set: " + hubExpansion);
                         return true;
                     }
+                }
+
+                if (clipText.matches("([0-9]+ [^\n]+\n)*([0-9]+ [^\n]+)")) {
+                    final double sum = Arrays.stream(clipText.split("\r?\n")).map((String line) -> {
+                        final String[] split = line.split(" ", 2);
+                        if (split.length != 2) {
+                            return LootEntry.BLANK;
+                        }
+                        return new LootEntry(Integer.parseInt(split[0]), split[1]);
+                    }).mapToDouble(entry -> {
+                        if (!LootEntry.BLANK.equals(entry)) {
+                            final MetaInf metaInf = evedb.getMetaInfs().get(entry.getName());
+                            if (metaInf != null && entry.getQuantity() != 0) {
+                                return esimarket.getBO(metaInf.id, entry.getQuantity());
+                            }
+                        }
+                        return 0D;
+                    }).sum();
+                    ui.message("Price: "+formatPrice(sum));
                 }
             } catch (UnsupportedFlavorException | IOException e) {
                 e.printStackTrace();
